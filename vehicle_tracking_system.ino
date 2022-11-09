@@ -1,12 +1,7 @@
-*********************************Include Libraries*********************************
-// Used for connecting to GSM800L module
-#include <TinyGsmClient.h>
 
-// Used for connecting to GPS module
-#include <TinyGPS++.h>
-#include <TinyGPSPlus.h>
-
-// Used for connecting to firebase
+#define TINY_GSM_MODEM_SIM800
+      // Modem is SIM800
+#define TINY_GSM_RX_BUFFER   1024
 #include <FB_Const.h>
 #include <FB_Error.h>
 #include <FB_Network.h>
@@ -14,15 +9,24 @@
 #include <Firebase.h>
 #include <FirebaseESP8266.h>
 #include <FirebaseFS.h>
-#include <MB_File.h>
-#include <MB_NTP.h>
+
+
+/*********************************Include Libraries*********************************/
+// Used for connecting to GSM800L module
+#include <TinyGsmClient.h>
+
+// Used for connecting to GPS module
+#include <TinyGPS++.h>
+#include <TinyGPSPlus.h>
+
+
 
 // Provide the token generation process info.
 #include "addons/TokenHelper.h"
 // Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
 
-********************************* Database Secret *********************************
+/********************************* Database Secret *********************************/
 
 // Project database API key
 #define API_KEY "AIzaSyB1OhSjNVxfYpVkF3NErZqImdEIAvZueww"
@@ -30,25 +34,19 @@
 // Real-time database URL
 #define DATABASE_URL "https://vehicle-tracking-system-8d230-default-rtdb.firebaseio.com/"
 
-********************************* User Authentication *********************************
+/********************************* User Authentication *********************************/
 
 #define USER_EMAIL "siddhi.patil211@vit.edu"
 #define USER_PASSWORD "Siddhi@123"
 
-********************************* Firebase Objects *********************************
+/********************************* Firebase Objects *********************************/
 
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 FirebaseJson json;
 
-********************************* Global Variables *********************************
-
-// Name of modem
-#define TINY_GSM_MODEM_SIM800
-
-// Increase RX buffer
-#define TINY_GSM_RX_BUFFER 256
+/********************************* Global Variables *********************************/
 
 // Your GPRS credentials
 char apn[]  = "airtelgprs.com";
@@ -80,7 +78,7 @@ String databasePath;
 String latPath = "/latitude";
 String lngPath = "/longitude";
 String speedPath = "/speed";
-String altitudePath = "/altitude";
+String altPath = "/altitude";
 String timePath = "/timestamp";
 
 // Parent Node (to be updated in every loop)
@@ -88,12 +86,12 @@ String parentPath;
 
 // Variable to save current epoch time
 int timestamp;
-
+bool newData;
 // Timer variables (send new readings every ten seconds)
 unsigned long sendDataPrevMillis = 0;
 unsigned long timerDelay = 10000;
 
-********************************* Setup *********************************
+/********************************* Setup *********************************/
 
 void setup() {
   
@@ -152,7 +150,7 @@ void setup() {
   databasePath = "/UsersData/" + uid + "/readings";
 }
 
-********************************* Loop *********************************
+/********************************* Loop *********************************/
 
 void loop() {
 
@@ -200,10 +198,11 @@ void loop() {
   Serial.println(longitude);
 
     //Get current timestamp
-    timestamp = String(date + time);
+    date = String(date);
+    timestamp = date.concat(time);
     Serial.print ("time: ");
     Serial.println (timestamp);
-
+s
     parentPath= databasePath + "/" + String(timestamp);
 
     json.set(latPath.c_str(), String(latitude));
@@ -214,5 +213,6 @@ void loop() {
     Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
   }
 }
+}
 
-********************************* End *********************************
+/********************************* End *********************************/
