@@ -17,6 +17,7 @@ TinyGPSPlus gps; // The TinyGPS++ object
 SoftwareSerial ss(RXPin, TXPin); // The serial connection to the GPS device
 
 float speed;      // Variable  to store the speed
+float altitude;   // Variable  to store the altitude
 float sats;       // Variable to store no. of satellites response
 String direction; // Variable to store orientation or direction of GPS
 float latitude, longitude;
@@ -30,14 +31,14 @@ const char *ssid = "abcd";
 const char *password = "iotpassword";
 
 // Insert Firebase project API Key
-#define API_KEY "AIzaSyDih2vTH4-boGtgvhvcKVwdw382PK7yDkQ"
+#define API_KEY "api"
 
 // Insert Authorized Email and Corresponding Password
-#define USER_EMAIL "siddhi.patil211@vit.edu"
+#define USER_EMAIL "kuldeep.aher212@vit.edu"
 #define USER_PASSWORD "IOTPROJECT"
 
 // Insert RTDB URLefine the RTDB URL
-#define DATABASE_URL "https://nodemcu-gps-bf1f1-default-rtdb.asia-southeast1.firebasedatabase.app/"
+#define DATABASE_URL "https://nodemcu-gps-****-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
 // Define Firebase objects
 FirebaseData fbdo;
@@ -166,7 +167,8 @@ void postToFB()
 
     json.set(latPath.c_str(), latitude);
     json.set(longPath.c_str(), longitude);
-    json.set(speedPath.c_str(), String(gps.speed.kmph()));
+    json.set(speedPath.c_str(), speed);
+    json.set(altPath.c_str(), altitude);
     json.set(directionPath.c_str(), String(direction));
     json.set(timePath.c_str(), timestamp);
     Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
@@ -183,7 +185,8 @@ void displayInfo()
   Serial.println(latitude, 6); // float to x decimal places
   Serial.print("LONG: ");
   Serial.println(longitude, 6);
-  speed = gps.speed.kmph();                              // get speed
+  speed = gps.speed.kmph(); // get speed
+  altitude = gps.altitude.meters();
   sats = gps.satellites.value();                         // get number of satellites
   direction = TinyGPSPlus::cardinal(gps.course.value()); // get the direction
   Serial.println(direction);
