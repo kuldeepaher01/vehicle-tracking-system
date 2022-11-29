@@ -1,136 +1,128 @@
-
-#define TINY_GSM_MODEM_SIM800
-      // Modem is SIM800
-#define TINY_GSM_RX_BUFFER   1024
-#include <FB_Const.h>
-#include <FB_Error.h>
-#include <FB_Network.h>
-#include <FB_Utils.h>
-#include <Firebase.h>
-#include <FirebaseESP8266.h>
-#include <FirebaseFS.h>
-
-
-/*********************************Include Libraries*********************************/
-// Used for connecting to GSM800L module
-#include <TinyGsmClient.h>
-
-// Used for connecting to GPS module
 #include <TinyGPS++.h>
-#include <TinyGPSPlus.h>
-
-
+#include <SoftwareSerial.h>
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <Firebase_ESP_Client.h>
 
 // Provide the token generation process info.
 #include "addons/TokenHelper.h"
 // Provide the RTDB payload printing info and other helper functions.
 #include "addons/RTDBHelper.h"
 
-/********************************* Database Secret *********************************/
+static const int RXPin = 4, TXPin = 5; // GPIO 4=D2(conneect Tx of GPS) and GPIO 5=D1(Connect Rx of GPS
+static const uint32_t GPSBaud = 9600;  // if Baud rate 9600 didn't work in your case then use 4800
 
-// Project database API key
-#define API_KEY "AIzaSyB1OhSjNVxfYpVkF3NErZqImdEIAvZueww"
+TinyGPSPlus gps; // The TinyGPS++ object
 
-// Real-time database URL
-#define DATABASE_URL "https://vehicle-tracking-system-8d230-default-rtdb.firebaseio.com/"
+SoftwareSerial ss(RXPin, TXPin); // The serial connection to the GPS device
 
-/********************************* User Authentication *********************************/
+float speed;      // Variable  to store the speed
+float sats;       // Variable to store no. of satellites response
+String direction; // Variable to store orientation or direction of GPS
+float latitude, longitude;
+int year, month, date, hour, minute, second;
+String date_str, time_str;
 
+int pm;
+
+// Insert your network credentials
+const char *ssid = "abcd";
+const char *password = "iotpassword";
+
+// Insert Firebase project API Key
+#define API_KEY "AIzaSyDih2vTH4-boGtgvhvcKVwdw382PK7yDkQ"
+
+// Insert Authorized Email and Corresponding Password
 #define USER_EMAIL "siddhi.patil211@vit.edu"
-#define USER_PASSWORD "Siddhi@123"
+#define USER_PASSWORD "IOTPROJECT"
 
-/********************************* Firebase Objects *********************************/
+// Insert RTDB URLefine the RTDB URL
+#define DATABASE_URL "https://nodemcu-gps-bf1f1-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
+// Define Firebase objects
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
-FirebaseJson json;
 
-/********************************* Global Variables *********************************/
-
-// Your GPRS credentials
-char apn[]  = "airtelgprs.com";
-char user[] = "";
-char pass[] = "";
-
-// GSM module pins
-#define rxPin 4
-#define txPin 2
-HardwareSerial sim800(1);
-TinyGsm modem(sim800); // GSM modem object
-
-// GPS module pins
-#define RXD2 16
-#define TXD2 17
-HardwareSerial neogps(2);
-TinyGPSPlus gps; // GPS object
-
-// Create TinyGSM client instances
-TinyGsmClientSecure gsm_client_secure_modem(modem, 0);
-
-// Variable to save user UID
+// Variable to save USER UID
 String uid;
 
-// Database main path
+// Database main path (to be updated in setup with the user UID)
 String databasePath;
-
 // Database child nodes
-String latPath = "/latitude";
-String lngPath = "/longitude";
+String latPath = "/latitudee";
+String longPath = "/longitude";
 String speedPath = "/speed";
-String altPath = "/altitude";
 String timePath = "/timestamp";
+String directionPath = "/direction";
 
 // Parent Node (to be updated in every loop)
 String parentPath;
 
+FirebaseJson json;
+
 // Variable to save current epoch time
-int timestamp;
-bool newData;
-// Timer variables (send new readings every ten seconds)
+String timestamp;
+
+// Timer variables (send new readings every three minutes)
 unsigned long sendDataPrevMillis = 0;
 unsigned long timerDelay = 10000;
 
-/********************************* Setup *********************************/
+// // Initialize WiFi
+// void initWiFi() {
+//   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+//   Serial.print("Connecting to WiFi ..");
+//   while (WiFi.status() != WL_CONNECTED) {
+//     Serial.print('.');
+//     delay(1000);
+//   }
+//   Serial.println(WiFi.localIP());
+//   Serial.println();
+// }
 
-void setup() {
-  
+void setup()
+{
   Serial.begin(115200);
-
-  // Initializing GSM
-  sim800.begin(9600, SERIAL_8N1, rxPin, txPin);
-  Serial.println("SIM800L serial initialize");
-
-  // Initializing GPS
-  neogps.begin(9600, SERIAL_8N1, RXD2, TXD2);
-  Serial.println("neogps serial initialize");
-  delay(3000);
-
-  // Assign the api key
+  ss.begin(9600);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+  // Assign the api key (required)
   config.api_key = API_KEY;
 
   // Assign the user sign in credentials
   auth.user.email = USER_EMAIL;
   auth.user.password = USER_PASSWORD;
 
-  // Assign the RTDB URL
+  // Assign the RTDB URL (required)
   config.database_url = DATABASE_URL;
 
-  //////// Firebase.reconnectWiFi(true);
+  Firebase.reconnectWiFi(true);
   fbdo.setResponseSize(4096);
 
-  // Assign the callback function for the long running token generation task
-  config.token_status_callback = tokenStatusCallback;
+  // Assign the callback function for the long running token generation task */
+  config.token_status_callback = tokenStatusCallback; // see addons/TokenHelper.h
 
   // Assign the maximum retry of token generation
-  config.max_token_generation_retry = 3;
+  config.max_token_generation_retry = 5;
 
   // Initialize the library with the Firebase authen and config
   Firebase.begin(&config, &auth);
 
-  // Getting the user UID (loading)
+  // Getting the user UID might take a few seconds
   Serial.println("Getting User UID");
-  while ((auth.token.uid) == "") {
+  while ((auth.token.uid) == "")
+  {
     Serial.print('.');
     delay(1000);
   }
@@ -139,80 +131,123 @@ void setup() {
   Serial.print("User UID: ");
   Serial.println(uid);
 
-  // Restarting modem for fresh connectivity to network
-  Serial.println("Initializing modem...");
-  modem.restart();
-  String modemInfo = modem.getModemInfo();
-  Serial.print("Modem: ");
-  Serial.println(modemInfo);
-
   // Update database path
-  databasePath = "/UsersData/" + uid + "/readings";
+  databasePath = "/UsersData/" + uid + "/data";
 }
 
-/********************************* Loop *********************************/
-
-void loop() {
-
-  // GSM connection to sim card
-  Serial.print(F("Connecting to "));
-  Serial.print(apn);
-  if (!modem.gprsConnect(apn, user, pass)) {
-    Serial.println(" fail");
-    delay(1000);
-    return;
+void loop()
+{
+  while (ss.available() > 0)
+  {
+    // sketch displays information every time a new sentence is correctly encoded.
+    if (gps.encode(ss.read()))
+    {
+      displayInfo();
+      timeStmp();
+      postToFB();
+      delay(10000);
+    }
   }
-  Serial.println(" OK");
-  
-  // Send new readings to database after this time interval
-  if (Firebase.ready() && (millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
+}
+
+void postToFB()
+{
+  // Send new readings to database
+  if (Firebase.ready())
+  {
     sendDataPrevMillis = millis();
 
-  // Checks if GPS is working
-    while (neogps.available()){
-      if (gps.encode(neogps.read())){
-        newData = true;
-        break;
-      }
-    }
+    // //Get current timestamp
+    timestamp = date_str + time_str;
+    Serial.print("time: ");
+    Serial.println(timestamp);
 
-  // If newData is true
-  if(true){
-  newData = false;
-  
-  String latitude, longitude;
-  float altitude;
-  unsigned long date, time, speed, satellites;
-  
-  latitude = String(gps.location.lat(), 6); // Latitude in degrees (double)
-  longitude = String(gps.location.lng(), 6); // Longitude in degrees (double)
-  
-  altitude = gps.altitude.meters(); // Altitude in meters (double)
-  date = gps.date.value(); // Raw date in DDMMYY format (u32)
-  time = gps.time.value(); // Raw time in HHMMSSCC format (u32)
-  speed = gps.speed.kmph();
-  
-  Serial.print("Latitude= "); 
-  Serial.print(latitude);
-  Serial.print(" Longitude= "); 
-  Serial.println(longitude);
+    parentPath = databasePath + "/" + String(timestamp);
 
-    //Get current timestamp
-    date = String(date);
-    timestamp = date.concat(time);
-    Serial.print ("time: ");
-    Serial.println (timestamp);
-s
-    parentPath= databasePath + "/" + String(timestamp);
-
-    json.set(latPath.c_str(), String(latitude));
-    json.set(lngPath.c_str(), String(longitude));
-    json.set(speedPath.c_str(), String(speed));
-    json.set(altPath.c_str(), String(altitude));
-    json.set(timePath, String(timestamp));
+    json.set(latPath.c_str(), latitude);
+    json.set(longPath.c_str(), longitude);
+    json.set(speedPath.c_str(), String(gps.speed.kmph()));
+    json.set(directionPath.c_str(), String(direction));
+    json.set(timePath.c_str(), timestamp);
     Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
   }
 }
+
+void displayInfo()
+{
+  Serial.print(gps.location.isValid());
+  // if (gps.location.isValid()) {
+  latitude = (gps.location.lat()); // Storing the Lat. and Lon.
+  longitude = (gps.location.lng());
+  Serial.print("LAT:  ");
+  Serial.println(latitude, 6); // float to x decimal places
+  Serial.print("LONG: ");
+  Serial.println(longitude, 6);
+  speed = gps.speed.kmph();                              // get speed
+  sats = gps.satellites.value();                         // get number of satellites
+  direction = TinyGPSPlus::cardinal(gps.course.value()); // get the direction
+  Serial.println(direction);
+  // }
 }
 
-/********************************* End *********************************/
+void timeStmp()
+{
+  if (gps.date.isValid())
+
+  {
+    date_str = "";
+    date = gps.date.day();
+    month = gps.date.month();
+    year = gps.date.year();
+    if (year < 10)
+      date_str += '0';
+    date_str += String(year);
+    date_str += "/";
+    if (month < 10)
+      date_str += '0';
+    date_str += String(month);
+    date_str += "/";
+    if (date < 10)
+      date_str = '0';
+    date_str += String(date);
+    date_str += "/";
+  }
+
+  if (gps.time.isValid())
+
+  {
+    time_str = "";
+    hour = gps.time.hour();
+    minute = gps.time.minute();
+    second = gps.time.second();
+    minute = (minute + 30);
+    if (minute > 59)
+    {
+      minute = minute - 60;
+      hour = hour + 1;
+    }
+    hour = (hour + 5);
+    if (hour > 23)
+      hour = hour - 24;
+    if (hour >= 12)
+      pm = 1;
+    else
+      pm = 0;
+    hour = hour % 12;
+    if (hour < 10)
+      time_str = '0';
+    time_str += String(hour);
+    time_str += ":";
+    if (minute < 10)
+      time_str += '0';
+    time_str += String(minute);
+    time_str += ":";
+    if (second < 10)
+      time_str += '0';
+    time_str += String(second);
+    if (pm == 1)
+      time_str += "PM";
+    else
+      time_str += "AM";
+  }
+}
