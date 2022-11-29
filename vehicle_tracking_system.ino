@@ -31,11 +31,11 @@ const char *ssid = "abcd";
 const char *password = "iotpassword";
 
 // Insert Firebase project API Key
-#define API_KEY "api"
+#define API_KEY "apikey"
 
 // Insert Authorized Email and Corresponding Password
 #define USER_EMAIL "kuldeep.aher212@vit.edu"
-#define USER_PASSWORD "IOTPROJECT"
+#define USER_PASSWORD "*****"
 
 // Insert RTDB URLefine the RTDB URL
 #define DATABASE_URL "https://nodemcu-gps-****-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -51,7 +51,8 @@ String uid;
 // Database main path (to be updated in setup with the user UID)
 String databasePath;
 // Database child nodes
-String latPath = "/latitudee";
+String latPath = "/latitude";
+String altPath = "/altitude";
 String longPath = "/longitude";
 String speedPath = "/speed";
 String timePath = "/timestamp";
