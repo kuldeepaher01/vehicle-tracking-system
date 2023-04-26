@@ -35,14 +35,14 @@ const char *ssid = "BORGIR 2G";
 const char *password = "Sattychomu";
 
 // Insert Firebase project API Key
-#define API_KEY "AIzaSyDgyhj_2ia9biNEz5VcqI4iN7ZXQZjVaUQ"
+#define API_KEY "#####################"
 
 // Insert Authorized Email and Corresponding Password
-#define USER_EMAIL "kuldeep@gmail.coom"
+#define USER_EMAIL "abc@gmail.com"
 #define USER_PASSWORD "Admin@123"
 
 // Insert RTDB URLefine the RTDB URL https://vehicle-tracking
-#define DATABASE_URL "https://test-db-52093-default-rtdb.firebaseio.com/"
+#define DATABASE_URL "*************default-rtdb.firebaseio.com/"
 
 // Define Firebase objects
 FirebaseData fbdo;
