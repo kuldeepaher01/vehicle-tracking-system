@@ -35,14 +35,14 @@ const char *ssid = "BORGIR 2G";
 const char *password = "Sattychomu";
 
 // Insert Firebase project API Key
-#define API_KEY "put_ur_api"
+#define API_KEY "AIzaSyDgyhj_2ia9biNEz5VcqI4iN7ZXQZjVaUQ"
 
 // Insert Authorized Email and Corresponding Password
 #define USER_EMAIL "kuldeep@gmail.coom"
 #define USER_PASSWORD "Admin@123"
 
-// Insert RTDB URLefine the RTDB URL https://
-#define DATABASE_URL "https://abcd.firebaseio.com/"
+// Insert RTDB URLefine the RTDB URL https://vehicle-tracking
+#define DATABASE_URL "https://test-db-52093-default-rtdb.firebaseio.com/"
 
 // Define Firebase objects
 FirebaseData fbdo;
@@ -72,7 +72,7 @@ String timestamp;
 
 void setup() {
   Serial.begin(115200);
-  ss.begin(9600);  //Begin UART communication between GPS and NodeMCU
+  ss.begin(9600);  //Begin Serial communication between GPS and ESP32
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
@@ -119,17 +119,18 @@ void setup() {
   Serial.println(uid);
 
   // Update database path
-  databasePath = "/UsersData/" + uid + "/data";
+  databasePath = "/UsersData/" + uid + "/data"; 
 }
 
 void loop() {
-  Serial.println(ss.available());
+  // Serial.println(ss.available());
   while (ss.available() > 0) {
     // Everytime successfull connection is established btweeen geo-satellites this code will run
     if (gps.encode(ss.read())) {
       displayInfo();
-      if(prevlatitude != latitude || prevlongitude != longitude || first == 1)
-      {timeStmp();
+      if((prevlatitude != latitude && prevlongitude != longitude) || first == 1)
+      {
+        timeStmp();
       postToFB();
       delay(4000);}
     }
@@ -163,6 +164,7 @@ void displayInfo() {
   prevlatitude = latitude;
   prevlongitude = longitude;
   Serial.print(gps.location.isValid());
+
   latitude = (gps.location.lat());  // Storing the Lat. and Lon.
   longitude = (gps.location.lng());
   Serial.print("LAT:  ");
@@ -196,6 +198,7 @@ void timeStmp() {
     date_str += "-";
     if (date < 10)
       date_str = '0';
+      
     date_str += String(date);
     date_str += "-";
   }
